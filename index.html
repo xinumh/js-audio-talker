@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音对讲</title></title>
+</head>
+<body>
+    <button type="button" id="start">开始对讲</button>
+    <button type="button" id="stop">停止对讲</button>
+</body>
+
+<script type="module">
+    import Talker from './index.js'
+    var startButton = document.getElementById('start')
+    var stopButton = document.getElementById('stop')
+
+    console.log('Talker', Talker)
+
+    const recorder = new Talker({socketUrl: 'ws://114.98.231.178:40002/talk?deviceId=34000005510000040179&targetId=34000005510000040179&ssrc=467883120'})
+
+    console.log('recorder', recorder)
+
+    startButton.onclick = () => {
+        recorder.start().then(res => console.log('res', res)).catch(err => console.log('err', err))
+    }
+
+    stopButton.onclick = () => {
+        recorder.stop().then(msg => {
+            console.log('msg', msg)
+        })
+        .catch(err => console.log('err', err))
+    }
+    
+    
+</script>
+</html>
