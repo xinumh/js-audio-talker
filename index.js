@@ -70,7 +70,7 @@ function Talker ({socketUrl=''}) {
         const alaw = alawmulaw.alaw.encode(new Int16Array(pcm.buffer))
 
         console.log('pcm', pcm)
-        console.log('alaw', pcm)
+        console.log('alaw', alaw)
       }
     })
     .catch(err => {
@@ -155,6 +155,6 @@ function Talker ({socketUrl=''}) {
   }
 }
 
-modules.export = {
+module.exports = {
   Talker
 };
