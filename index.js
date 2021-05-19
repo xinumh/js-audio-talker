@@ -1,6 +1,6 @@
 
 function Talker ({socketUrl=''}) {
-  // var alawmulaw = require('./alawmulaw.js')
+  var alawmulaw = require ? require('./alawmulaw.js') : loadAlaw()
   var audioContext = null
   var socketUrl = socketUrl
   var inputSampleBits = 16       // 输入采样位数
@@ -20,8 +20,6 @@ function Talker ({socketUrl=''}) {
     script.src = './alawmulaw.js'
     document.querySelector('body').appendChild(script)
   }
-
-  loadAlaw()
 
   /**
    * navigator.mediaDevices
