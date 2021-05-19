@@ -1,6 +1,6 @@
 
 function Talker ({socketUrl=''}) {
-  var alawmulaw = require ? require('./alawmulaw.js') : loadAlaw()
+  var alawmulaw = require('./alawmulaw.js')
   var audioContext = null
   var socketUrl = socketUrl
   var inputSampleBits = 16       // 输入采样位数
@@ -21,6 +21,7 @@ function Talker ({socketUrl=''}) {
     document.querySelector('body').appendChild(script)
   }
 
+  // loadAlaw()
   /**
    * navigator.mediaDevices
    * 
@@ -61,7 +62,7 @@ function Talker ({socketUrl=''}) {
 
   const useWebSocket = async () => {
     socket = socket ? socket : new WebSocket(socketUrl)
-    if (socket.readyState === 1) {
+    if (socket.readyState !== 1) {
       return await getPermission()
     } else {
       return Promise.reject(new Error('WebSocket 连接失败'))
@@ -167,7 +168,7 @@ function Talker ({socketUrl=''}) {
   this.start = async function () {
     try {
       await useWebSocket()
-      console.log('success')
+      console.log('WebSocket 已连接')
       await startTalk()
     } catch (err) {
       return await Promise.reject(new Error(err))
