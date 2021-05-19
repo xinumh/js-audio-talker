@@ -1,6 +1,6 @@
 
 function Talker ({socketUrl=''}) {
-  var alawmulaw = require('./alawmulaw.js')
+  // var alawmulaw = require('./alawmulaw.js')
   var audioContext = null
   var socketUrl = socketUrl
   var inputSampleBits = 16       // 输入采样位数
@@ -11,10 +11,17 @@ function Talker ({socketUrl=''}) {
 
   var littleEdian = true         // 是否是小端字节序
   var source = null              // 音频输入
-  var recorder = null          // 创建一个 ScriptProcessorNode
+  var recorder = null            // 创建一个 ScriptProcessorNode
 
   var socket = null
 
+  const loadAlaw = () => {
+    const script = document.createElement('script')
+    script.src = './alawmulaw.js'
+    document.querySelector('body').appendChild(script)
+  }
+
+  loadAlaw()
 
   /**
    * navigator.mediaDevices
@@ -44,39 +51,58 @@ function Talker ({socketUrl=''}) {
    * getPermission
    * 授权麦克风权限
    */
-  const getPermission = () => {
+  const getPermission = async () => {
     const constraints = { audio: true } // 指定了请求使用媒体的类型
-    navigator.mediaDevices.getUserMedia(constraints).then(stream => {
-      console.log('用户已授权麦克风', stream)
-
-      audioContext = new (window.AudioContext || window.webkitAudioContext)()
-
-      source = audioContext.createMediaStreamSource(stream)
-
-      recorder = audioContext.createScriptProcessor(4096, 1, 1) // 创建一个 ScriptProcessorNode （缓冲区大小， 输入node的声道的数量， 输出node的声道的数量）
-
-      socket = new WebSocket(socketUrl)
-
-      recorder.onaudioprocess = (audioProcessingEvent) => {
-        // 输入缓存区
-        var inputBuffer = audioProcessingEvent.inputBuffer
-
-        var inputData = new Float32Array(inputBuffer.getChannelData(0))
-
-        const compressedData = compress(inputData)
-
-        const pcm = encodePCM(compressedData)
-
-        const alaw = alawmulaw.alaw.encode(new Int16Array(pcm.buffer))
-
-        console.log('pcm', pcm)
-        console.log('alaw', alaw)
-      }
-    })
-    .catch(err => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      return success(stream)
+    } catch (err) {
       return new Error(err)
-    })
+    }
   }
+
+  const useWebSocket = async () => {
+    socket = socket ? socket : new WebSocket(socketUrl)
+    if (socket.readyState === 1) {
+      return await getPermission()
+    } else {
+      return Promise.reject(new Error('WebSocket 连接失败'))
+    }
+  }
+
+  /**
+   * success
+   * 授权成功回调
+   * @param {stream} Float32Array 
+   */
+  const success = stream => {
+    console.log('用户已授权麦克风', stream)
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+    source = audioContext.createMediaStreamSource(stream)
+
+    recorder = audioContext.createScriptProcessor(4096, 1, 1) // 创建一个 ScriptProcessorNode （缓冲区大小， 输入node的声道的数量， 输出node的声道的数量）
+
+    socket = new WebSocket(socketUrl)
+
+    recorder.onaudioprocess = (audioProcessingEvent) => {
+      // 编码-发送
+      var inputBuffer = audioProcessingEvent.inputBuffer
+
+      var inputData = new Float32Array(inputBuffer.getChannelData(0))
+
+      const compressedData = compress(inputData)
+
+      const pcm = encodePCM(compressedData)
+
+      const alaw = alawmulaw.alaw.encode(new Int16Array(pcm.buffer))
+
+      console.log('alaw', alaw)
+      socket.send(alaw)
+    }
+  }
+
   /**
    * compress
    * 压缩为指定的输出频率 8000
@@ -128,18 +154,25 @@ function Talker ({socketUrl=''}) {
 
   }
 
-
-  initUserMedia()
-  getPermission()
-
-  this.start = function () {
-    console.log('开始讲话')
+  const startTalk = async () => {
     try {
+      console.log('开始讲话')
       source.connect(recorder)
       recorder.connect(audioContext.destination)
-      return Promise.resolve({success: true})
+      return Promise.resolve({ success: true })
     } catch (err) {
       return Promise.reject(new Error(err))
+    }
+  }
+  
+
+  this.start = async function () {
+    try {
+      await useWebSocket()
+      console.log('success')
+      await startTalk()
+    } catch (err) {
+      return await Promise.reject(new Error(err))
     }
   }
 
@@ -153,8 +186,12 @@ function Talker ({socketUrl=''}) {
       return Promise.reject(new Error(err))
     }
   }
+
+  initUserMedia()
 }
 
 module.exports = {
   Talker
 };
+
+// export default Talker
