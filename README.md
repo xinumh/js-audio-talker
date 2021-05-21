@@ -34,3 +34,8 @@ stopButton.onclick = () => {
 
 ```
 
+## 参考文档
+
+[https://recorder.zhuyuntao.cn/](https://recorder.zhuyuntao.cn/)
+
+[https://github.com/rochars/alawmulaw](https://github.com/rochars/alawmulaw)

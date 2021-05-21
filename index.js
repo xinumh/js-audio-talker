@@ -1,6 +1,6 @@
 
-function Talker (socketUrl = '') {
-  var alawmulaw = require('./alawmulaw.js')
+function Talker ({socketUrl = ''} = {}) {
+  // var alawmulaw = require('./alawmulaw.js')
   var audioContext = null
   var socketUrl = socketUrl
   var inputSampleBits = 16       // 输入采样位数
@@ -22,7 +22,7 @@ function Talker (socketUrl = '') {
     document.querySelector('body').appendChild(script)
   }
 
-  // loadAlaw()
+  loadAlaw()
   /**
    * navigator.mediaDevices
    * 
@@ -100,7 +100,8 @@ function Talker (socketUrl = '') {
         console.log('alaw', alaw)
         socket.send(alaw)
       } else {
-        console.warn('WebSocket 连接失败')
+        this.stop()
+        throw Error('WebSocket 连接失败')
       }
     }
   }
@@ -194,8 +195,8 @@ function Talker (socketUrl = '') {
 
 }
 
-module.exports = {
-  Talker
-};
+// module.exports = {
+//   Talker
+// };
 
-// export default Talker
+export default Talker
