@@ -1,5 +1,5 @@
 
-function Talker ({socketUrl=''}) {
+function Talker (socketUrl = '') {
   var alawmulaw = require('./alawmulaw.js')
   var audioContext = null
   var socketUrl = socketUrl
@@ -12,8 +12,9 @@ function Talker ({socketUrl=''}) {
   var littleEdian = true         // 是否是小端字节序
   var source = null              // 音频输入
   var recorder = null            // 创建一个 ScriptProcessorNode
+  var streamFlag = null          // 终止流（这可以让浏览器上正在录音的标志消失掉）
 
-  var socket = null
+  var socket = null              // webscoket
 
   const loadAlaw = () => {
     const script = document.createElement('script')
@@ -27,6 +28,7 @@ function Talker ({socketUrl=''}) {
    * 
    */
   const initUserMedia = () => {
+    console.log('initUserMedia')
     if (navigator.mediaDevices === undefined) {
       navigator.mediaDevices = {};
     }
@@ -51,24 +53,17 @@ function Talker ({socketUrl=''}) {
    * 授权麦克风权限
    */
   const getPermission = async () => {
+    if (!socketUrl) {
+      return Promise.reject('Websocket Url 不能为空')
+    }
+    initUserMedia()
+    console.log('getPermission')
     const constraints = { audio: true } // 指定了请求使用媒体的类型
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      return success(stream)
-    } catch (err) {
-      return new Error(err)
-    }
+    return navigator.mediaDevices.getUserMedia(constraints).then(success).catch(() => {
+      console.warn('拒绝访问麦克风，可在浏览器地址栏右侧重新授权')
+      return Promise.reject('拒绝访问麦克风')
+    })
   }
-
-  const useWebSocket = async () => {
-    socket = socket ? socket : new WebSocket(socketUrl)
-    if (socket.readyState !== 1) {
-      return await getPermission()
-    } else {
-      return Promise.reject(new Error('WebSocket 连接失败'))
-    }
-  }
-
   /**
    * success
    * 授权成功回调
@@ -76,6 +71,8 @@ function Talker ({socketUrl=''}) {
    */
   const success = stream => {
     console.log('用户已授权麦克风', stream)
+
+    streamFlag = stream // 关闭浏览器媒体标志，就那个tab上的红点点儿~~
 
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
 
@@ -85,20 +82,26 @@ function Talker ({socketUrl=''}) {
 
     socket = new WebSocket(socketUrl)
 
+    console.log('socket', socket)
+    
     recorder.onaudioprocess = (audioProcessingEvent) => {
-      // 编码-发送
-      var inputBuffer = audioProcessingEvent.inputBuffer
+      if (socket.readyState === 1) {
+        // 编码-发送
+        var inputBuffer = audioProcessingEvent.inputBuffer
 
-      var inputData = new Float32Array(inputBuffer.getChannelData(0))
+        var inputData = new Float32Array(inputBuffer.getChannelData(0))
 
-      const compressedData = compress(inputData)
+        const compressedData = compress(inputData)
 
-      const pcm = encodePCM(compressedData)
+        const pcm = encodePCM(compressedData)
 
-      const alaw = alawmulaw.alaw.encode(new Int16Array(pcm.buffer))
+        const alaw = alawmulaw.alaw.encode(new Int16Array(pcm.buffer))
 
-      console.log('alaw', alaw)
-      socket.send(alaw)
+        console.log('alaw', alaw)
+        socket.send(alaw)
+      } else {
+        console.warn('WebSocket 连接失败')
+      }
     }
   }
 
@@ -152,41 +155,43 @@ function Talker ({socketUrl=''}) {
     return data
 
   }
-
-  const startTalk = async () => {
+  
+  const startTalk = () => {
     try {
-      console.log('开始讲话')
       source.connect(recorder)
       recorder.connect(audioContext.destination)
-      return Promise.resolve({ success: true })
-    } catch (err) {
+      return Promise.resolve({success: true})
+    } catch (error) {
       return Promise.reject(new Error(err))
     }
   }
-  
 
   this.start = async function () {
     try {
-      await useWebSocket()
-      console.log('WebSocket 已连接')
-      await startTalk()
+      await getPermission()
+      return startTalk()
     } catch (err) {
-      return await Promise.reject(new Error(err))
+      return await Promise.reject({msg: err})
     }
   }
 
   this.stop = function () {
     console.log('结束讲话')
+    if (streamFlag && streamFlag.getTracks) {
+      streamFlag.getTracks().forEach(track => track.stop())
+    }
+    if (!source || !recorder) {
+      return Promise.reject({msg: '未开始讲话'})
+    }
     try {
       source.disconnect(recorder)
       recorder.disconnect(audioContext.destination)
       return Promise.resolve({success: true})
     } catch (err) {
-      return Promise.reject(new Error(err))
+      return Promise.reject({msg: err.message})
     }
   }
 
-  initUserMedia()
 }
 
 module.exports = {

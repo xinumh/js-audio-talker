@@ -16,21 +16,30 @@
     var startButton = document.getElementById('start')
     var stopButton = document.getElementById('stop')
 
-    // console.log('Talker', Talker)
+    let recorder = null
+    
 
-    const recorder = new Talker({socketUrl: 'ws://114.98.231.178:40002/talk?deviceId=34000005510000040179&targetId=34000005510000040179&ssrc=467883120'})
-
-    console.log('recorder', recorder)
 
     startButton.onclick = () => {
-        recorder.start().then(res => console.log('startButton-res', res)).catch(err => console.log('startButton-err', err))
+        recorder =  new Talker('ws://114.98.231.178:40003/talk?deviceId=34000005510000040179&targetId=34000005510000040179&ssrc=23685630')
+        // recorder =  new Talker()
+        console.log('recorder', recorder)
+
+        recorder.start().then(res => { 
+            console.log('startButton-res', res)
+        })
+        .catch(err => {
+            console.log('startButton-err', err)
+            console.log('startButton-err', err.msg)
+        })
     }
 
     stopButton.onclick = () => {
         recorder.stop().then(msg => {
             console.log('msg', msg)
+            console.log('msg', msg.msg)
         })
-        .catch(err => console.log('err', err))
+        .catch(err => console.log('stopButton-err', err))
     }
     
     
