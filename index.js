@@ -1,6 +1,6 @@
 
 function Talker ({socketUrl = ''} = {}) {
-  // var alawmulaw = require('./alawmulaw.js')
+  var alawmulaw = require('./alawmulaw.js')
   var audioContext = null
   var socketUrl = socketUrl
   var inputSampleBits = 16       // 输入采样位数
@@ -22,7 +22,7 @@ function Talker ({socketUrl = ''} = {}) {
     document.querySelector('body').appendChild(script)
   }
 
-  loadAlaw()
+  // loadAlaw()
   /**
    * navigator.mediaDevices
    * 
@@ -58,6 +58,7 @@ function Talker ({socketUrl = ''} = {}) {
     }
     initUserMedia()
     console.log('getPermission')
+    socket = new WebSocket(socketUrl)
     const constraints = { audio: true } // 指定了请求使用媒体的类型
     return navigator.mediaDevices.getUserMedia(constraints).then(success).catch(() => {
       console.warn('拒绝访问麦克风，可在浏览器地址栏右侧重新授权')
@@ -80,10 +81,6 @@ function Talker ({socketUrl = ''} = {}) {
 
     recorder = audioContext.createScriptProcessor(4096, 1, 1) // 创建一个 ScriptProcessorNode （缓冲区大小， 输入node的声道的数量， 输出node的声道的数量）
 
-    socket = new WebSocket(socketUrl)
-
-    console.log('socket', socket)
-    
     recorder.onaudioprocess = (audioProcessingEvent) => {
       if (socket.readyState === 1) {
         // 编码-发送
@@ -101,9 +98,10 @@ function Talker ({socketUrl = ''} = {}) {
         socket.send(alaw)
       } else {
         this.stop()
-        throw Error('WebSocket 连接失败')
+        throw new Error('WebSocket 连接失败')
       }
     }
+    
   }
 
   /**
@@ -158,6 +156,10 @@ function Talker ({socketUrl = ''} = {}) {
   }
   
   const startTalk = () => {
+    if (socket.readyState !== 1) {
+      stopStreamTracks()
+      return Promise.reject({msg: 'WebSocket 连接失败'})
+    }
     try {
       source.connect(recorder)
       recorder.connect(audioContext.destination)
@@ -167,9 +169,17 @@ function Talker ({socketUrl = ''} = {}) {
     }
   }
 
+  // 清除语音标记
+  const stopStreamTracks = () => {
+    if (streamFlag && streamFlag.getTracks) {
+      streamFlag.getTracks().forEach(track => track.stop())
+    }
+  }
+
   this.start = async function () {
     try {
       await getPermission()
+      console.log('授权成功')
       return startTalk()
     } catch (err) {
       return await Promise.reject({msg: err})
@@ -178,9 +188,7 @@ function Talker ({socketUrl = ''} = {}) {
 
   this.stop = function () {
     console.log('结束讲话')
-    if (streamFlag && streamFlag.getTracks) {
-      streamFlag.getTracks().forEach(track => track.stop())
-    }
+    stopStreamTracks()
     if (!source || !recorder) {
       return Promise.reject({msg: '未开始讲话'})
     }
@@ -195,8 +203,8 @@ function Talker ({socketUrl = ''} = {}) {
 
 }
 
-// module.exports = {
-//   Talker
-// };
+module.exports = {
+  Talker
+};
 
-export default Talker
+// export default Talker

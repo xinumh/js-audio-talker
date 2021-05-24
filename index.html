@@ -21,7 +21,12 @@
 
 
     startButton.onclick = () => {
-        recorder =  new Talker({socketUrl: 'ws://127.0.0.1:40003/talk?'})
+        // recorder =  new Talker({socketUrl: 'ws://127.0.0.1:40003/talk?'})
+        try {
+            recorder =  new Talker({socketUrl: 'ws:111'})
+        } catch(err) {
+            console.log('err', err)
+        }
         // recorder =  new Talker()
         console.log('recorder', recorder)
 

@@ -1,6 +1,6 @@
 {
   "name": "js-audio-talk",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "js voice real-time intercom",
   "main": "index.js",
   "scripts": {
