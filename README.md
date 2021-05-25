@@ -14,6 +14,13 @@ yarn add js-audio-talk
 
 ## 引用
 
+> 注意: 通过 MediaDevices.getUserMedia() 获取用户多媒体权限时，需要注意其只工作于以下三种环境：
+
+- localhost 域
+
+- 开启了 HTTPS 的域
+
+- 使用 file:/// 协议打开的本地文件
 
 
 ```js
